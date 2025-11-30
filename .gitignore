@@ -1,3 +1,4 @@
+*.key
 
 spider2-dbt/evaluation_suite/*
 spider2-dbt/release_spider2/spider2c.jsonl
