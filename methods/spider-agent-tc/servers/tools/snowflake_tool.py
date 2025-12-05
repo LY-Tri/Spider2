@@ -1,36 +1,31 @@
 import snowflake.connector
 from snowflake.connector.errors import ProgrammingError, DatabaseError
 import pandas as pd
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 import logging
 import time
-import json
 import os
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT = 60
+TIMEOUT = 300  # 5 minutes for complex queries
 MAX_CSV_CHARS = 2000
 
 def get_snowflake_credentials() -> Dict[str, str]:
-    credentials_path = "credentials/snowflake_credential.json"
-    try:
-        with open(credentials_path, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logger.error(f"Credentials file not found at: {os.path.abspath(credentials_path)}")
-        raise
-    except json.JSONDecodeError:
-        logger.error(f"Invalid JSON in credentials file: {credentials_path}")
-        raise
-    except Exception as e:
-        logger.error(f"Error loading credentials: {str(e)}")
-        raise
+    """Load Snowflake credentials from environment variables."""
+    return {
+        "user": os.environ.get("SNOWFLAKE_USER"),
+        "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+        "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+        "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+        "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+    }
 
 def execute_snowflake_sql(sql: str, **kwargs) -> Dict[str, Any]:
     logger.info(f"Executing Snowflake SQL: {sql}")
     
     timeout = kwargs.get('timeout', TIMEOUT)
+    database = kwargs.get('database', None)  # Optional database context
     start_time = time.time()
     
     content = ""
@@ -39,6 +34,10 @@ def execute_snowflake_sql(sql: str, **kwargs) -> Dict[str, Any]:
     try:
         # Get Snowflake credentials from file
         snowflake_credential = get_snowflake_credentials()
+        
+        # Add database to connection if specified
+        if database:
+            snowflake_credential = {**snowflake_credential, 'database': database}
         
         # Connect to Snowflake using credentials
         conn = snowflake.connector.connect(
@@ -118,6 +117,83 @@ Note: The result has been truncated to {MAX_CSV_CHARS} characters for display pu
     return {
         "content": f"EXECUTION RESULT of [execute_snowflake_sql]:\n{content}"
     }
+
+def execute_snowflake_sql_batch(queries: list, **kwargs) -> list:
+    """
+    Execute multiple SQL queries in a single connection.
+    Useful for creating temp tables that need to persist across queries.
+    
+    Args:
+        queries: List of SQL strings to execute in order
+        database: Optional database to use
+        schema: Optional schema to use (default: same as database, or "PUBLIC")
+        timeout: Connection timeout (default 300s)
+    
+    Returns:
+        List of result dicts, one per query
+    """
+    timeout = kwargs.get('timeout', TIMEOUT)
+    database = kwargs.get('database', None)
+    schema = kwargs.get('schema', None)
+    
+    results = []
+    conn = None
+    
+    try:
+        snowflake_credential = get_snowflake_credentials()
+        if database:
+            snowflake_credential = {**snowflake_credential, 'database': database}
+            # Default schema to database name if not specified (common pattern)
+            if not schema:
+                schema = database
+        if schema:
+            snowflake_credential = {**snowflake_credential, 'schema': schema}
+        
+        conn = snowflake.connector.connect(
+            **snowflake_credential,
+            login_timeout=timeout,
+            network_timeout=timeout
+        )
+        cursor = conn.cursor()
+        
+        for sql in queries:
+            try:
+                cursor.execute(sql)
+                
+                if cursor.description:
+                    headers = [desc[0] for desc in cursor.description]
+                    rows = cursor.fetchall()
+                    if rows:
+                        df = pd.DataFrame(rows, columns=headers)
+                        csv_data = df.to_csv(index=False)
+                        if len(csv_data) > MAX_CSV_CHARS:
+                            truncated = csv_data[:MAX_CSV_CHARS]
+                            last_nl = truncated.rfind('\n')
+                            if last_nl > 0:
+                                truncated = truncated[:last_nl]
+                            content = f"Query executed successfully\n\n```csv\n{truncated}\n```\n\nNote: Truncated to {MAX_CSV_CHARS} chars. Total: {len(rows)} rows."
+                        else:
+                            content = f"Query executed successfully\n\n```csv\n{csv_data}```"
+                    else:
+                        content = "Query executed successfully, but no rows returned."
+                else:
+                    conn.commit()
+                    content = "Query executed successfully."
+                
+                results.append({"content": f"EXECUTION RESULT of [execute_snowflake_sql]:\n{content}", "success": True})
+                
+            except (ProgrammingError, DatabaseError) as e:
+                results.append({"content": f"EXECUTION RESULT of [execute_snowflake_sql]:\nSQL Error: {str(e)}", "success": False})
+                break  # Stop on error
+                
+    except Exception as e:
+        results.append({"content": f"EXECUTION RESULT of [execute_snowflake_sql]:\nConnection error: {str(e)}", "success": False})
+    finally:
+        if conn:
+            conn.close()
+    
+    return results
+
 
 def register_tools(registry):
     registry.register_tool("execute_snowflake_sql", execute_snowflake_sql)

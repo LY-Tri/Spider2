@@ -22,20 +22,11 @@ def clear_folder(folder_path):
 
 
 def setup_snowflake():
-    credential_path = 'snowflake_credential.json'
-    with open(JSONL_PATH, "r") as f:
-        examples = [json.loads(line) for line in f]
-    for example in examples:
-        instance_id = example['instance_id']
-        folder_path = f'examples/{instance_id}'
-        target_credential_path = os.path.join(folder_path, 'snowflake_credential.json')
-
-        if os.path.exists(target_credential_path):
-            os.remove(target_credential_path)
-
-        shutil.copy(credential_path, target_credential_path)
-        print(f"Copied Snowflake credential for instance {instance_id}.")
-    
+    # Snowflake credentials are now loaded from environment variables
+    # No need to copy credential files
+    print("Snowflake credentials will be loaded from environment variables.")
+    print("Required env vars: SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, SNOWFLAKE_ACCOUNT")
+    print("Optional env vars: SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE")
     print("Finished Snowflake setup...")
 
 
@@ -145,7 +136,6 @@ def add_agent_setting():
 
     for example in tqdm(examples):
         instance_id = example['instance_id']
-        credential_path_sf = 'snowflake_credential.json'
         credential_path_bq = 'bigquery_credential.json'
 
         if instance_id.startswith('bq') or instance_id.startswith('ga'):
@@ -158,15 +148,8 @@ def add_agent_setting():
 
             shutil.copy(credential_path_bq, target_credential_path)
         
-        elif instance_id.startswith('sf'):
-
-            folder_path = f'examples/{instance_id}'
-            target_credential_path = os.path.join(folder_path, credential_path_sf)
-
-            if os.path.exists(target_credential_path):
-                os.remove(target_credential_path)
-
-            shutil.copy(credential_path_sf, target_credential_path)
+        # Snowflake credentials are loaded from environment variables
+        # No need to copy credential files for sf instances
         
 
 

@@ -122,12 +122,23 @@ def compare_pandas_table(pred, gold, condition_cols=[], ignore_order=False):
     return score
 
 
+def get_snowflake_credentials():
+    """Load Snowflake credentials from environment variables."""
+    return {
+        "user": os.environ.get("SNOWFLAKE_USER"),
+        "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+        "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+        "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+        "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+    }
+
+
 def get_snowflake_sql_result(sql_query, is_save, save_dir=None, file_name="result.csv"):
     """
     is_save = True, output a 'result.csv'
     if_save = False, output a string
     """
-    snowflake_credential = json.load(open('./credentials/snowflake_credential.json'))
+    snowflake_credential = get_snowflake_credentials()
     conn = snowflake.connector.connect(
         **snowflake_credential
     )
