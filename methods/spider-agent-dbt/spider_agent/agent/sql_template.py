@@ -117,12 +117,17 @@ except Exception as e:
 
 SF_EXEC_SQL_QUERY_TEMPLATE = """
 import os
-import json
 import pandas as pd
 import snowflake.connector
 
-# Load Snowflake credentials
-snowflake_credential = json.load(open("/workspace/snowflake_credential.json"))
+# Load Snowflake credentials from environment variables
+snowflake_credential = {
+    "user": os.environ.get("SNOWFLAKE_USER"),
+    "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+    "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+    "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+    "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+}
 
 # Connect to Snowflake
 conn = snowflake.connector.connect(
@@ -166,12 +171,17 @@ finally:
 
 SF_GET_TABLE_INFO_TEMPLATE = """
 import os
-import json
 import pandas as pd
 import snowflake.connector
 
-# Load Snowflake credentials
-snowflake_credential = json.load(open("/workspace/snowflake_credential.json"))
+# Load Snowflake credentials from environment variables
+snowflake_credential = {
+    "user": os.environ.get("SNOWFLAKE_USER"),
+    "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+    "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+    "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+    "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+}
 
 # Connect to Snowflake
 conn = snowflake.connector.connect(
@@ -209,12 +219,17 @@ finally:
 
 SF_GET_TABLES_TEMPLATE = """
 import os
-import json
 import pandas as pd
 import snowflake.connector
 
-# Load Snowflake credentials
-snowflake_credential = json.load(open("/workspace/snowflake_credential.json"))
+# Load Snowflake credentials from environment variables
+snowflake_credential = {
+    "user": os.environ.get("SNOWFLAKE_USER"),
+    "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+    "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+    "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+    "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+}
 
 # Connect to Snowflake
 conn = snowflake.connector.connect(
@@ -244,8 +259,14 @@ import json
 import pandas as pd
 import snowflake.connector
 
-# Load Snowflake credentials
-snowflake_credential = json.load(open("/workspace/snowflake_credential.json"))
+# Load Snowflake credentials from environment variables
+snowflake_credential = {
+    "user": os.environ.get("SNOWFLAKE_USER"),
+    "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+    "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+    "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+    "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+}
 
 # Connect to Snowflake
 conn = snowflake.connector.connect(
@@ -263,8 +284,8 @@ query = f\"\"\"
         LIMIT {row_number};
         ;
 \"\"\"  
-query_job = client.query(query)
-output = query_job.result().to_dataframe()
+cursor.execute(query)
+output = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
 sample_rows = output.to_dict(orient='records')
 json_data = json.dumps(sample_rows, indent=4, default=str)
 with open({save_path}, 'w') as json_file: 

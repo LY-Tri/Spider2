@@ -117,12 +117,17 @@ except Exception as e:
 
 SF_EXEC_SQL_QUERY_TEMPLATE = """
 import os
-import json
 import pandas as pd
 import snowflake.connector
 
-# Load Snowflake credentials
-snowflake_credential = json.load(open("/workspace/snowflake_credential.json"))
+# Load Snowflake credentials from environment variables
+snowflake_credential = {
+    "user": os.environ.get("SNOWFLAKE_USER"),
+    "password": os.environ.get("SNOWFLAKE_PASSWORD"),
+    "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+    "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
+    "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
+}
 
 # Connect to Snowflake
 conn = snowflake.connector.connect(

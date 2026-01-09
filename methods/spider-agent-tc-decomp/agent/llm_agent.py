@@ -138,6 +138,8 @@ class LLMAgent:
             self.file_manager.add_single_result(error_result)
             print(f"Error processing {instance_id} rollout {rollout_idx + 1}: {str(e)}")
             return error_result
+        finally:
+            self.message_processor.cleanup(item)
     
     def run(self):
         """Main execution function"""

@@ -1,5 +1,10 @@
 *.key
+*.json
+*.sql
+*.csv
+*.ipynb
 
+misc
 spider2-dbt/evaluation_suite/*
 spider2-dbt/release_spider2/spider2c.jsonl
 spider2-dbt/evaluation_suite/gold/spider2c_eval.jsonl
@@ -142,3 +147,4 @@ spider2-lite/resource/databases/spider2-localdb
 credentials/
 **/credentials/
 
+spider2-snow/evaluation_suite/log.txt
