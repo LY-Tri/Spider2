@@ -1,12 +1,18 @@
-OPENAI_API_KEY=$(cat ../../openai.key)
+# activate .venv if available
+if [ -f .venv/bin/activate ]; then
+    source ../../.venv/bin/activate
+fi
+
+source ../../openai.key
 export OPENAI_API_KEY
+export OPENAI_API_BASE
 
 INPUT_FILE="../../spider2-snow/spider2-snow.jsonl"
 SYSTEM_PROMPT="./prompts/spider_agent.txt"
-DATABASES_PATH="/u/lynie/project/projects/Spider2/spider2-snow/resource/databases"  # MUST fill your own absolute path
+DATABASES_PATH="../../spider2-snow/resource/databases"  # MUST fill your own absolute path
 DOCUMENTS_PATH="../../spider2-snow/resource/documents"
 
-MODEL="gpt-5-mini"
+MODEL="gpt-5.2"
 TEMPERATURE=0.7
 TOP_P=0.9
 MAX_NEW_TOKENS=12000
@@ -22,9 +28,14 @@ mkdir -p "./results"
 echo "Output file will be: $OUTPUT_FOLDER"
 
 
-
-host=$(hostname -I | awk '{print $1}')
-port=$(shuf -i 30000-31000 -n 1)
+# macOS compatible: use ipconfig for IP, jot for random number
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    host=$(echo "127.0.0.1")
+    port=$(jot -r 1 30000 31000)
+else
+    host=$(hostname -I | awk '{print $1}')
+    port=$(shuf -i 30000-31000 -n 1)
+fi
 tool_server_url=http://$host:$port/get_observation
 python -m servers.serve --workers_per_tool 32 --host $host --port $port  &
 server_pid=$!

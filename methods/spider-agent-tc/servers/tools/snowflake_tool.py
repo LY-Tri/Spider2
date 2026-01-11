@@ -13,10 +13,26 @@ MAX_CSV_CHARS = 2000
 
 def get_snowflake_credentials() -> Dict[str, str]:
     """Load Snowflake credentials from environment variables."""
+    user = os.environ.get("SNOWFLAKE_USER")
+    password = os.environ.get("SNOWFLAKE_PASSWORD")
+    account = os.environ.get("SNOWFLAKE_ACCOUNT")
+    
+    # Validate required credentials to provide clear error messages
+    missing = []
+    if not user:
+        missing.append("SNOWFLAKE_USER")
+    if not password:
+        missing.append("SNOWFLAKE_PASSWORD")
+    if not account:
+        missing.append("SNOWFLAKE_ACCOUNT")
+    
+    if missing:
+        raise ValueError(f"Missing required Snowflake environment variables: {', '.join(missing)}")
+    
     return {
-        "user": os.environ.get("SNOWFLAKE_USER"),
-        "password": os.environ.get("SNOWFLAKE_PASSWORD"),
-        "account": os.environ.get("SNOWFLAKE_ACCOUNT"),
+        "user": user,
+        "password": password,
+        "account": account,
         "role": os.environ.get("SNOWFLAKE_ROLE", "PARTICIPANT"),
         "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH_PARTICIPANT"),
     }
