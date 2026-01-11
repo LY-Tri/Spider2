@@ -1,3 +1,4 @@
+import os
 import argparse
 import asyncio
 import uvicorn
@@ -12,7 +13,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
-load_dotenv("../../../snowflake.key")
+if os.path.exists("../../snowflake.key"):
+    load_dotenv("../../snowflake.key")
+else:
+    raise FileNotFoundError("snowflake.key not found")
 
 app = FastAPI(title="Tools Server API")
 tool_registry = ToolRegistry()
