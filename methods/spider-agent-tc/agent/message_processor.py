@@ -7,6 +7,20 @@ class MessageProcessor:
     def __init__(self, args):
         self.args = args
     
+    @staticmethod
+    def _sanitize_function_name(raw: str) -> str:
+        """
+        LLMs sometimes emit malformed tags like:
+          <function=execute_bash</function>
+        which our regex would capture as 'execute_bash</function'.
+        We defensively extract the leading identifier token.
+        """
+        if not raw:
+            return raw
+        raw = raw.strip().strip('"').strip("'")
+        m = re.match(r"^[A-Za-z0-9_]+", raw)
+        return m.group(0) if m else raw
+    
     def process_round(self, llm_response, item, messages, conversation_history):
         assistant_content, tool_calls, preserved_content = self.parse_assistant_message(llm_response, item)
 
@@ -81,14 +95,15 @@ class MessageProcessor:
             match = matches[0]
             func_match = re.search(r'<function=([^>]+)>', match)
             if func_match:
-                function_name = func_match.group(1)
+                function_name = self._sanitize_function_name(func_match.group(1))
                 
                 param_pattern = r'<parameter=([^>]+)>(.*?)</parameter>'
                 param_matches = re.findall(param_pattern, match, re.DOTALL)
                 
                 arguments = {}
                 for param_name, param_value in param_matches:
-                    arguments[param_name] = param_value.strip()
+                    clean_name = param_name.strip().strip('"').strip("'").lower()
+                    arguments[clean_name] = param_value.strip()
                 
                 if function_name == "execute_bash" and "work_dir" not in arguments:
                     arguments["work_dir"] = os.path.join(self.args.databases_path, item['db_id'])

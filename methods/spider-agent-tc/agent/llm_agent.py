@@ -16,16 +16,34 @@ from prompt_builders import get_prompt_builder
 class LLMAgent:
     def __init__(self, args):
         self.args = args
-        self.model_client = OpenAI(
-            base_url=os.getenv("OPENAI_API_BASE"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
-        
+
+        # Check if we want to use Azure OpenAI or regular OpenAI
+        azure_api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        azure_deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+
+        if azure_api_base and azure_api_key and azure_deployment_name:
+            # Use Azure OpenAI
+            from openai import AzureOpenAI
+            self.model_client = AzureOpenAI(
+                api_key=azure_api_key,
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2023-05-15"),
+                azure_endpoint=azure_api_base,
+            )
+            self.azure_deployment_name = azure_deployment_name
+            self.is_azure = True
+        else:
+            # Use OpenAI by default
+            self.model_client = OpenAI(
+                base_url=os.getenv("OPENAI_API_BASE"),
+                api_key=os.getenv("OPENAI_API_KEY"),
+            )
+            self.azure_deployment_name = None
+            self.is_azure = False
+
         self.file_manager = FileManager(args)
         self.message_processor = MessageProcessor(args)
-        
         self.prompt_builder = get_prompt_builder(args.prompt_strategy)
-        
         self.processed_instances = defaultdict(int)
         
     def call_llm(self, messages, instance_id=None, round_num=None):
