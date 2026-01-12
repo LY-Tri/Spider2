@@ -8,6 +8,12 @@ import os
 
 logger = logging.getLogger(__name__)
 
+from dotenv import load_dotenv
+if os.path.exists("../../snowflake.key"):
+    load_dotenv("../../snowflake.key")
+else:
+    raise FileNotFoundError("snowflake.key not found")
+
 TIMEOUT = 300  # 5 minutes for complex queries
 MAX_CSV_CHARS = 2000
 
