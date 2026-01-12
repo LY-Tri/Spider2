@@ -16,10 +16,24 @@ from prompt_builders import get_prompt_builder
 class LLMAgent:
     def __init__(self, args):
         self.args = args
-        self.model_client = OpenAI(
-            base_url=os.getenv("OPENAI_API_BASE"),
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
+        
+        # Check if Azure OpenAI credentials are set
+        if os.getenv("AZURE_OPENAI_API_KEY"):
+            from openai import AzureOpenAI
+            self.model_client = AzureOpenAI(
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"),
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            )
+            # Override model with deployment name for Azure
+            if os.getenv("AZURE_OPENAI_DEPLOYMENT"):
+                self.args.model = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        else:
+            # Use standard OpenAI
+            self.model_client = OpenAI(
+                base_url=os.getenv("OPENAI_API_BASE"),
+                api_key=os.getenv("OPENAI_API_KEY"),
+            )
         
         self.file_manager = FileManager(args)
         self.message_processor = MessageProcessor(args)
