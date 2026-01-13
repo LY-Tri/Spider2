@@ -49,6 +49,12 @@ async def execute_tool(request: Request) -> JSONResponse:
         
         result = await tool_registry.execute_tool(tool_name, **arguments)
         
+        # Log the result, trimmed to 100 characters if necessary
+        result_str = str(result)
+        if len(result_str) > 100:
+            result_str = result_str[:100] + "..."
+        logger.info(f"Tool {tool_name} result: {result_str}")
+        
         return JSONResponse(content=result)
     
     except Exception as e:

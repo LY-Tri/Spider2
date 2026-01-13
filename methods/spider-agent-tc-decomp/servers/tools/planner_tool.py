@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def plan_step(
-    step_description: str,
+    step_description: str = None,
     step_number: Optional[str] = None,
     depends_on: Optional[str] = None,
     rationale: Optional[str] = None,
@@ -26,6 +26,11 @@ def plan_step(
     Returns:
         Confirmation to proceed with generating the sub-SQL
     """
+    if not step_description:
+        return {
+            "content": "ERROR: 'step_description' is a required parameter for [plan_step]. Please provide it."
+        }
+
     logger.info(f"Planning step: {step_description}")
     
     # Format the step information

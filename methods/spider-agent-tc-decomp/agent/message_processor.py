@@ -100,22 +100,55 @@ class MessageProcessor:
                 param_pattern = r'<parameter=([^>]+)>(.*?)</parameter>'
                 param_matches = re.findall(param_pattern, match, re.DOTALL)
                 
-                arguments = {}
-                for param_name, param_value in param_matches:
-                    clean_name = param_name.strip().strip('"').strip("'").lower()
-                    arguments[clean_name] = param_value.strip()
-                
-                if function_name == "execute_bash" and "work_dir" not in arguments:
-                    arguments["work_dir"] = os.path.join(self.args.databases_path, item['db_id'])
-                
-                # Add session_id to SQL execution tools for temp table persistence
-                if function_name in ["execute_sql_step", "execute_snowflake_sql"]:
-                    arguments["session_id"] = item.get("instance_id", "default")
-                
-                tool_calls.append({
-                    "name": function_name,
-                    "arguments": arguments
-                })
+            arguments = {}
+            
+            # Strategy A: <parameter=name>value</parameter>
+            matches_a = re.findall(r'<parameter=([^>]+)>(.*?)</parameter>', match, re.DOTALL)
+            for name, val in matches_a:
+                clean_name = name.strip().strip('"').strip("'").lower()
+                arguments[clean_name] = val.strip()
+            
+            # Strategy B: <parameter>name</parameter>value</parameter>
+            # (Matches the format: <parameter>step_description</parameter> My plan... </parameter>)
+            matches_b = re.findall(r'<parameter>([^<]+)</parameter>(.*?)</parameter>', match, re.DOTALL)
+            for name, val in matches_b:
+                clean_name = name.strip().strip('"').strip("'").lower()
+                if clean_name not in arguments:
+                    arguments[clean_name] = val.strip()
+            
+            # Strategy C: <parameter><name>name</name>value</parameter> or <parameter><name>name</name><value>value</value></parameter>
+            matches_c = re.findall(r'<parameter>\s*<name>([^<]+)</name>(.*?)</parameter>', match, re.DOTALL)
+            for name, val in matches_c:
+                clean_name = name.strip().strip('"').strip("'").lower()
+                if clean_name not in arguments:
+                    val_content = val.strip()
+                    # Clean up if value is wrapped in <value> tags
+                    val_match = re.search(r'<value>(.*?)</value>', val_content, re.DOTALL)
+                    if val_match:
+                        val_content = val_match.group(1).strip()
+                    arguments[clean_name] = val_content
+            
+            # Strategy D: Check for direct tags that might be parameters (excluding known non-parameter tags)
+            all_tags = re.findall(r'<([^/>\s=]+)>(.*?)</\1>', match, re.DOTALL)
+            for name, val in all_tags:
+                clean_name = name.strip().lower()
+                if clean_name not in ['function', 'parameter', 'tool_call', 'name', 'value'] and clean_name not in arguments:
+                    arguments[clean_name] = val.strip()
+
+            # 3. Post-processing for specific tools
+            if function_name == "execute_bash" and "work_dir" not in arguments:
+                arguments["work_dir"] = os.path.join(self.args.databases_path, item['db_id'])
+            
+            # Add session_id to SQL execution tools for temp table persistence
+            if function_name in ["execute_sql_step", "execute_snowflake_sql"]:
+                arguments["session_id"] = item.get("instance_id", "default")
+                if "database" not in arguments and "db_id" in item:
+                    arguments["database"] = item["db_id"]
+            
+            tool_calls.append({
+                "name": function_name,
+                "arguments": arguments
+            })
         
         return tool_calls
     

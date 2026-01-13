@@ -8,10 +8,13 @@ from collections import defaultdict
 import threading
 import glob
 from copy import deepcopy
+import logging
 
 from file_manager import FileManager
 from message_processor import MessageProcessor
 from prompt_builders import get_prompt_builder
+
+logger = logging.getLogger(__name__)
 
 class LLMAgent:
     def __init__(self, args):
@@ -32,6 +35,7 @@ class LLMAgent:
             )
             self.azure_deployment_name = azure_deployment_name
             self.is_azure = True
+            logger.info("Using Azure OpenAI")
         else:
             # Use OpenAI by default
             self.model_client = OpenAI(
@@ -40,7 +44,7 @@ class LLMAgent:
             )
             self.azure_deployment_name = None
             self.is_azure = False
-
+            logger.info("Using OpenAI")
         self.file_manager = FileManager(args)
         self.message_processor = MessageProcessor(args)
         

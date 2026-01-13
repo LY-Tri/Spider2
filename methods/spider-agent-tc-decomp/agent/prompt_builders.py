@@ -51,7 +51,9 @@ ls {os.path.join(args.databases_path, item['db_id'])}
 {db_info}
 ```
 
-When referencing tables, you must use the fully qualified three-part naming convention: database_name.schema_name.table_name. Now help me write the SQL query to answer the question. """
+When referencing tables, you must use the fully qualified three-part naming convention: database_name.schema_name.table_name. 
+
+IMPORTANT: This is a complex request. Please solve it by decomposing it into smaller, verifiable steps using `plan_step` and `execute_sql_step`. Do NOT attempt to write the final complex SQL in one go. Now help me start the decomposition process. """
 
         return [
             {"role": "system", "content": system_prompt},
